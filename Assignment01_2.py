@@ -3,6 +3,8 @@
 ## Make sure to use cross entropy to calculate loss values. 
 ## Don't use any prebuilt function for logistic regression. Write it on your own
 #%%
+import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.datasets import load_iris
 iris = load_iris()
 print("\
@@ -15,8 +17,6 @@ Description: {}\
     type(iris.data), iris.data.ndim,
     iris.feature_names, iris.DESCR))
 #%%
-import numpy as np
-import matplotlib.pyplot as plt
 X = iris.data[:, :2]        #Take the first two features
 y = iris.target
 
@@ -85,13 +85,16 @@ class LogisticRegression:
         h = np.ones((m, 1))                                         #initializing with 1 for all rows
         theta = theta.reshape(1, n+1)                               #[[theta0....thetaN]] 1D->2D
         for i in range(0, m):
+            theta_dot_x = float(np.matmul(theta, X[i]))
             if self.squash == 0:
-                h[i] = ActivationFunction.sigmoid(float(np.matmul(theta, X[i])))    #1/(1+e^-(theta.T*X))
+                h[i] = ActivationFunction.sigmoid(theta_dot_x)    #1/(1+e^-(theta.T*X))
             elif self.squash == 1:
                 #h[i] = self.logistic_sigmoid(float(np.matmul(theta, X[i])))      
-                h[i] = np.exp(np.matmul(theta, X[i]))                               #SoftMax Implementation        
+                h[i] = theta_dot_x                                #SoftMax Implementation
+            elif self.squash == 2:
+                h[i] = ActivationFunction.tanh(theta_dot_x)        
         if self.squash == 1:
-            h = h / sum(h)                                          #SoftMax Implementation
+            h = ActivationFunction.softmax(h)
         h = h.reshape(m)                                            #2D->1D/Flatten
         return h
 
@@ -321,7 +324,7 @@ y_pred_01_values
 '''Replacing '2' with '0' to fit, 
 as in Logistic Regression is a binary classifier & values should be 0 or 1'''
 train_set_12.loc[train_set_12['class'] == 2] = 0
-lm = LogisticRegression(iteration=20000, verbose=(True, 2000))
+lm = LogisticRegression(iteration=20000, verbose=(True, 2000), squash=2)
 theta_12 = lm.fit(train_set_12.iloc[:,2:4], train_set_12.iloc[:,-1:]['class'])
 print('Thetas[12]: {}'.format(lm.theta))
 lm.cost_minimization_curve()
@@ -333,6 +336,8 @@ prf1_12 = matric_12.precision_recall_f1()
 print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_12.accuracy(), prf1_12))
 matric_12.plot_confusion_matrix(normalized=False, class_names=iris.target_names[1:3])
 #%%
+'''Replacing '2' with '1' to fit
+'''
 train_set_20.loc[train_set_20['class'] == 2] = 1
 lm = LogisticRegression(iteration=20000, verbose=(True, 5000))
 theta_20 = lm.fit(train_set_20.iloc[:,2:4], train_set_20.iloc[:,-1:]['class'])
@@ -346,3 +351,7 @@ prf1_20 = matric_20.precision_recall_f1()
 print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_20.accuracy(), prf1_20))
 matric_20.plot_confusion_matrix(normalized=False, class_names=[iris.target_names[i] for i in (0, 2)])
 #%%
+x = np.arange(-5, 5, 0.1)
+y = ActivationFunction.softmax(x)
+plt.plot(x,y)
+plt.show()
