@@ -53,11 +53,26 @@ ax.set_zlabel("3rd eigenvector")
 ax.w_zaxis.set_ticklabels([])
 plt.show()
 #%%
+class ActivationFunction:
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
+    @staticmethod
+    def softmax(x):
+        return np.exp(x) / sum(np.exp(x))
+    
+    @staticmethod
+    def tanh(x):
+        return np.tanh(x)
+#%%
 class LogisticRegression:
-    def __init__(self, alpha = 0.0001, iteration = 10000, verbose = (True, 1000)):
+    activationMethod = ['sigmoid', 'softmax', 'tanh']
+    def __init__(self, alpha=0.0001, iteration=10000, verbose=(True, 1000), squash=0):
         self.alpha = alpha
         self.iteration = iteration
         self.verbose = verbose
+        self.squash = squash
         self.theta = np.ndarray
         self.cost = np.ndarray
     
@@ -65,21 +80,18 @@ class LogisticRegression:
         if(self.verbose[0] and not skip):
             print(text)
 
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    def logistic_sigmoid(self, x):
-        return np.exp(x) / 1 + np.exp(x)
-
     def hx(self, theta, X, n):        
         m = X.shape[0]                                              #Nos. of Records/Rows
         h = np.ones((m, 1))                                         #initializing with 1 for all rows
         theta = theta.reshape(1, n+1)                               #[[theta0....thetaN]] 1D->2D
         for i in range(0, m):
-            h[i] = self.sigmoid(float(np.matmul(theta, X[i])))      #1/(1+e^-(theta.T*X))
-            #h[i] = self.logistic_sigmoid(float(np.matmul(theta, X[i])))      
-            #h[i] = np.exp(np.matmul(theta, X[i]))                   #SoftMax Implementation
-        #h = h / sum(h)                                              #SoftMax Implementation
+            if self.squash == 0:
+                h[i] = ActivationFunction.sigmoid(float(np.matmul(theta, X[i])))    #1/(1+e^-(theta.T*X))
+            elif self.squash == 1:
+                #h[i] = self.logistic_sigmoid(float(np.matmul(theta, X[i])))      
+                h[i] = np.exp(np.matmul(theta, X[i]))                               #SoftMax Implementation        
+        if self.squash == 1:
+            h = h / sum(h)                                          #SoftMax Implementation
         h = h.reshape(m)                                            #2D->1D/Flatten
         return h
 
@@ -115,19 +127,21 @@ class LogisticRegression:
         self.gradient_descent(theta, fx, x, y, n)
         return self.theta
 
-    def predict(self, X, target_classes, showlog=False):
+    def predict(self, X, showlog=False):
         n = X.shape[1]
         m = X.shape[0]
         x0 = np.ones((m, 1))
         x = np.concatenate((x0, X), axis = 1)
-        y_pred = self.hx(self.theta, x, n)        
-        self.print_('Predicted y:\n{}'.format(y_pred), skip=not(showlog))
+        y_pred_values = self.hx(self.theta, x, n)        
+        self.print_('Predicted y:\n{}'.format(y_pred_values), skip=not(showlog))
+        
+        predicted_class = np.ndarray(m)
         for i in range(0, m):
-            if y_pred[i] > 0.5:
-                y_pred[i] = target_classes[1]
+            if y_pred_values[i] > 0.5:
+                predicted_class[i] = 1
             else:
-                y_pred[i] = target_classes[0]
-        return y_pred 
+                predicted_class[i] = 0
+        return predicted_class, y_pred_values 
 
     def cost_minimization_curve(self, msg=''):
         plt.plot(np.arange(self.iteration), self.cost.tolist())
@@ -138,10 +152,9 @@ class LogisticRegression:
 #%%
 from sklearn.utils.multiclass import unique_labels
 class Matric:
-    def __init__(self, y_hat, y_actual, target_classes=[0, 1]):
+    def __init__(self, y_hat, y_actual):
         self.y_hat = y_hat
         self.y_actual = y_actual
-        self.target_classes = target_classes        
         self.tp = self.fp = self.fn = self.tn = 0        
         
     def accuracy(self):
@@ -155,13 +168,13 @@ class Matric:
     def precision_recall_f1(self):
         precision = recall = f1 = np.inf
         for i in range(0, self.y_hat.shape[0]):
-            if self.y_hat[i] == self.y_actual[i] == self.target_classes[0]:
+            if self.y_hat[i] == self.y_actual[i] == 0:
                 self.tp += 1
-            elif self.y_hat[i] == self.target_classes[0] and self.y_actual[i] == self.target_classes[1]:
+            elif self.y_hat[i] == 0 and self.y_actual[i] == 1:
                 self.fp += 1
-            elif self.y_hat[i] == self.target_classes[1] and self.y_actual[i] == self.target_classes[0]:
+            elif self.y_hat[i] == 1 and self.y_actual[i] == 0:
                 self.fn += 1
-            elif self.y_hat[i] == self.y_actual[i] == self.target_classes[1]:
+            elif self.y_hat[i] == self.y_actual[i] == 1:
                 self.tn += 1
         try:
             precision = self.tp / (self.tp + self.fp)
@@ -181,9 +194,10 @@ class Matric:
             confusion_matrix = confusion_matrix.astype('float') / confusion_matrix.sum(axis = 1)[:, np.newaxis]
         print('Confusion Matrix:\n{}'.format(confusion_matrix))
                 
-        classes = np.ndarray(self.target_classes)
+        classes = np.ndarray([0, 1])
         if len(class_names) > 0:
-            classes = class_names[unique_labels(self.y_hat, self.y_actual).astype(np.int)]
+            #classes = class_names[unique_labels(self.y_hat, self.y_actual).astype(np.int)]
+            classes = class_names
 
         fig, ax = plt.subplots()
         im = plt.imshow(confusion_matrix, interpolation='nearest', cmap=plt.cm.Blues)
@@ -290,62 +304,45 @@ plt.show()
 Hence Taking Petal data for regession
 '''
 #%%
-lm = LogisticRegression(iteration=50000, verbose=(True, 200))
+lm = LogisticRegression(iteration=80000, verbose=(True, 5000))
 theta_01 = lm.fit(train_set_01.iloc[:,2:4], train_set_01.iloc[:,-1:]['class'])
 lm.cost_minimization_curve()
 print('Thetas[01]: {}'.format(lm.theta))
-
-y_pred_01 = lm.predict(test_set_01.iloc[:, 2:4])
-matric_01 = Matric(y_pred_01, test_set_01.iloc[:,-1:].reset_index()['class'], [0, 1])
+#%%
+y_pred_01, y_pred_01_values = lm.predict(test_set_01.iloc[:, 2:4], showlog=True)
+matric_01 = Matric(y_pred_01, test_set_01.iloc[:,-1:].reset_index()['class'])
 pre_re_f1_01 = matric_01.precision_recall_f1() 
 print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_01.accuracy(), pre_re_f1_01))
 matric_01.plot_confusion_matrix(normalized=False, class_names=iris.target_names)
-
 #%%
-lm = LogisticRegression(iteration=15000, verbose=(True, 200))
+y_pred_01
+y_pred_01_values
+#%%
+'''Replacing '2' with '0' to fit, 
+as in Logistic Regression is a binary classifier & values should be 0 or 1'''
+train_set_12.loc[train_set_12['class'] == 2] = 0
+lm = LogisticRegression(iteration=20000, verbose=(True, 2000))
 theta_12 = lm.fit(train_set_12.iloc[:,2:4], train_set_12.iloc[:,-1:]['class'])
 print('Thetas[12]: {}'.format(lm.theta))
 lm.cost_minimization_curve()
-
-y_pred_12 = lm.predict(train_set_12.iloc[:,2:4], [1, 2])
-matric_12= Matric(y_pred_12, train_set_12.iloc[:,-1:].reset_index()['class'], [1, 2])
+#%%
+train_set_12.loc[train_set_12['class'] == 2] = 0
+y_pred_12, y_pred_12_values = lm.predict(train_set_12.iloc[:,2:4], showlog=True)
+matric_12= Matric(y_pred_12, train_set_12.iloc[:,-1:].reset_index()['class'])
 prf1_12 = matric_12.precision_recall_f1() 
 print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_12.accuracy(), prf1_12))
-matric_12.plot_confusion_matrix(normalized=False, class_names=iris.target_names)
+matric_12.plot_confusion_matrix(normalized=False, class_names=iris.target_names[1:3])
 #%%
-lm = LogisticRegression(iteration=15000, verbose=(True, 200))
+train_set_20.loc[train_set_20['class'] == 2] = 1
+lm = LogisticRegression(iteration=20000, verbose=(True, 5000))
 theta_20 = lm.fit(train_set_20.iloc[:,2:4], train_set_20.iloc[:,-1:]['class'])
 print('Thetas[20]: {}'.format(lm.theta))
 lm.cost_minimization_curve()
-
-y_pred_20 = lm.predict(train_set_20.iloc[:,2:4], [0, 2], showlog=True)
-matric_20 = Matric(y_pred_20, train_set_20.iloc[:,-1:].reset_index()['class'], [0, 2])
+#%%
+test_set_20.loc[test_set_20['class'] == 2] = 1
+y_pred_20, y_pred_20_values = lm.predict(test_set_20.iloc[:,2:4], showlog=True)
+matric_20 = Matric(y_pred_20, test_set_20.iloc[:,-1:].reset_index()['class'])
 prf1_20 = matric_20.precision_recall_f1() 
 print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_20.accuracy(), prf1_20))
-matric_20.plot_confusion_matrix(normalized=False, class_names=iris.target_names)
+matric_20.plot_confusion_matrix(normalized=False, class_names=[iris.target_names[i] for i in (0, 2)])
 #%%
-#Normalizing Features
-def featureScaling(X_train):
-    n = X_train.shape[1]
-    m = X_train.shape[0]
-    mean = np.ones(n)
-    std = np.ones(n)
-    for i in range(0, n-1):
-        mean[i] = np.mean(X_train.T[i])
-        std[i] = np.std(X_train.T[i])
-        for j in range(0, m-1):
-            X_train.iloc[j][i] = (X_train.iloc[j][i] - mean[i]) / std[i]
-    return X_train
-#%%
-train_set_20_norm = featureScaling(train_set_20.iloc[:, :-1])
-
-lm = LogisticRegression(iteration=15000, verbose=(True, 200))
-theta_20 = lm.fit(train_set_20_norm.iloc[:,:-1], train_set_20.iloc[:,-1:]['class'])
-print('Thetas[20]: {}'.format(lm.theta))
-lm.cost_minimization_curve()
-
-y_pred_20 = lm.predict(train_set_20_norm.iloc[:,:-1], [0, 2], showlog=True)
-matric_20 = Matric(y_pred_20, train_set_20.iloc[:,-1:].reset_index()['class'], [0, 2])
-prf1_20 = matric_20.precision_recall_f1() 
-print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_20.accuracy(), prf1_20))
-matric_20.plot_confusion_matrix(normalized=False, class_names=iris.target_names)
