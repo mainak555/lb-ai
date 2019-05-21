@@ -351,7 +351,3 @@ prf1_20 = matric_20.precision_recall_f1()
 print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_20.accuracy(), prf1_20))
 matric_20.plot_confusion_matrix(normalized=False, class_names=[iris.target_names[i] for i in (0, 2)])
 #%%
-x = np.arange(-5, 5, 0.1)
-y = ActivationFunction.softmax(x)
-plt.plot(x,y)
-plt.show()
