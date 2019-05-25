@@ -31,7 +31,7 @@ class Squash:
 import matplotlib.pyplot as plt
 activation = Squash()
 z = np.arange(-5, 5, 0.1)
-prn = lambda i, fx, d_fx: print('--{}\n-f(x):\n{}\n-df/dx:\n{}'.format(i, fx, d_fx))
+prn = lambda i, fx, d_fx: print('>>{}\n-f(x):\n{}\n-df/dx:\n{}'.format(i, fx, d_fx))
 #%%
 #Sigmoid
 fig, ax = plt.subplots(4, 3, figsize=(10, 20))
@@ -186,7 +186,7 @@ for i in range(4):
 plt.show()
 #%%
 #PReLu
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 alpha = 2.25
 for i in range(4):
@@ -206,7 +206,7 @@ for i in range(4):
 plt.show()
 #%%
 #ELu
-fig, ax = plt.subplots(2, 3, sharex='all', figsize=(10, 10))
+fig, ax = plt.subplots(2, 3, figsize=(10, 10))
 a = z
 for i in range(2):
     fx = activation.function['elu'](a, alpha)
