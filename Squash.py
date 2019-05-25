@@ -10,8 +10,8 @@ class Squash:
             'softplus': lambda x: np.log(1 + np.exp(x)),
             'swish': lambda x: x / (1 + np.exp(-x)),
             'identity': lambda x: x,
-            'relu': lambda x: x if x >= 0 else np.zeros(x.shape[0]),
-            'prelu': lambda x, alpha: x if x >= 0 else alpha * x,
+            'relu': lambda x: [item if item >= 0 else 0 for item in x],
+            'prelu': lambda x, alpha: [item if item >= 0 else alpha * item for item in x],
             'elu': lambda x, alpha: [item if item >= 0 else np.dot(alpha, np.exp(item) - 1) for item in x]
             }            
         
@@ -23,15 +23,15 @@ class Squash:
             'softplus': lambda x: self.function['sigmoid'](x),
             'swish': lambda x: (lambda x= x, fx= x * self.function['sigmoid'](x): fx + (1 - fx) * self.function['sigmoid'](x))(),
             'identity': lambda x: np.ones(x.shape[0]),
-            'relu': lambda x: np.ones(x.shape[0]) if x >= 0 else np.zeros(x.shape[0]),
-            'prelu': lambda x, alpha: np.ones(x.shape[0]) if x >= 0 else np.repeat(alpha, x.shape[0]),
+            'relu': lambda x: [1 if item >= 0 else 0 for item in x],
+            'prelu': lambda x, alpha: [1 if item >= 0 else alpha for item in x],
             'elu': lambda x, alpha: [1 if item >= 0 else sum(self.function['elu']([item], alpha), alpha) for item in x]
         }
 #%%
 import matplotlib.pyplot as plt
 activation = Squash()
 z = np.arange(-5, 5, 0.1)
-prn = lambda i, fx, d_fx: print('>{}\n-f(x): {}\n-df/dx: {}'.format(i, fx, d_fx))
+prn = lambda i, fx, d_fx: print('--{}\n-f(x):\n{}\n-df/dx:\n{}'.format(i, fx, d_fx))
 #%%
 #Sigmoid
 fig, ax = plt.subplots(4, 3, figsize=(10, 20))
@@ -53,7 +53,7 @@ for i in range(4):
 plt.show()
 #%%
 #Tanh
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 for i in range(4):
     fx = activation.function['tanh'](a)
@@ -72,7 +72,7 @@ for i in range(4):
 plt.show()
 #%%
 #ArcTan
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 for i in range(4):
     fx = activation.function['arctan'](a)
@@ -91,7 +91,7 @@ for i in range(4):
 plt.show()
 #%%
 #Softmax
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 for i in range(4):
     fx = activation.function['softmax'](a)
@@ -110,7 +110,7 @@ for i in range(4):
 plt.show()
 #%%
 #SoftPlus
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 for i in range(4):
     fx = activation.function['softplus'](a)
@@ -129,7 +129,7 @@ for i in range(4):
 plt.show()
 #%%
 #Swish
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 for i in range(4):
     fx = activation.function['swish'](a)
@@ -149,7 +149,6 @@ plt.show()
 #%%
 #Identity
 fig, ax = plt.subplots(2, 3, figsize=(10, 10))
-z = np.arange(-1, 1, .2)
 a = z
 for i in range(2):
     fx = activation.function['identity'](a)
@@ -168,7 +167,7 @@ for i in range(2):
 plt.show()
 #%%
 #ReLu
-fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
+fig, ax = plt.subplots(4, 3, figsize=(10, 20))
 a = z
 for i in range(4):
     fx = activation.function['relu'](a)
@@ -189,12 +188,13 @@ plt.show()
 #PReLu
 fig, ax = plt.subplots(4, 3, sharex='all', figsize=(10, 20))
 a = z
+alpha = 2.25
 for i in range(4):
-    fx = activation.function['prelu'](a)
+    fx = activation.function['prelu'](a, alpha)
     ax[i, 0].set_title('f(x)')
     ax[i, 0].set_xlabel('x->')
     ax[i, 0].plot(a, fx)    
-    ddx_of_fx = activation.derivative['prelu'](a)
+    ddx_of_fx = activation.derivative['prelu'](a, alpha)
     ax[i, 1].set_title('df/dx')
     ax[i, 1].set_xlabel('f(x)->')
     ax[i, 1].plot(fx, ddx_of_fx)
@@ -208,7 +208,6 @@ plt.show()
 #ELu
 fig, ax = plt.subplots(2, 3, sharex='all', figsize=(10, 10))
 a = z
-alpha = 2.25
 for i in range(2):
     fx = activation.function['elu'](a, alpha)
     ax[i, 0].set_title('f(x)')
