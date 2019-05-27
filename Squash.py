@@ -12,7 +12,8 @@ class Squash:
             'identity': lambda x: x,
             'relu': lambda x: [item if item >= 0 else 0 for item in x],
             'prelu': lambda x, alpha: [item if item >= 0 else alpha * item for item in x],
-            'elu': lambda x, alpha: [item if item >= 0 else np.dot(alpha, np.exp(item) - 1) for item in x]
+            'elu': lambda x, alpha: [item if item >= 0 else np.dot(alpha, np.exp(item) - 1) for item in x], #Leaky Relu
+            'arctanh': lambda x: np.arctanh(x) 
             }            
         
         self.derivative = {
@@ -25,7 +26,8 @@ class Squash:
             'identity': lambda x: np.ones(x.shape[0]),
             'relu': lambda x: [1 if item >= 0 else 0 for item in x],
             'prelu': lambda x, alpha: [1 if item >= 0 else alpha for item in x],
-            'elu': lambda x, alpha: [1 if item >= 0 else sum(self.function['elu']([item], alpha), alpha) for item in x]
+            'elu': lambda x, alpha: [1 if item >= 0 else sum(self.function['elu']([item], alpha), alpha) for item in x],
+            'arctanh': lambda x: 1 / (1- x**2)
         }
 #%%
 import matplotlib.pyplot as plt
@@ -214,6 +216,26 @@ for i in range(2):
     ax[i, 0].set_xlabel('x->')
     ax[i, 0].plot(a, fx)    
     ddx_of_fx = activation.derivative['elu'](a, alpha)
+    ax[i, 1].set_title('df/dx')
+    ax[i, 1].set_xlabel('f(x)->')
+    ax[i, 1].plot(fx, ddx_of_fx)
+    ax[i, 2].set_title('df/dx vs. inp')
+    ax[i, 2].set_xlabel('inp->')
+    ax[i, 2].plot(z, ddx_of_fx) 
+    prn(i, fx, ddx_of_fx)   
+    a = fx
+plt.show()
+#%%
+#ArcTanh
+fig, ax = plt.subplots(2, 3, figsize=(10, 10))
+z = np.arange(-1, 1, .01)
+a = z
+for i in range(2):
+    fx = activation.function['arctanh'](a)
+    ax[i, 0].set_title('f(x)')
+    ax[i, 0].set_xlabel('x->')
+    ax[i, 0].plot(a, fx)    
+    ddx_of_fx = activation.derivative['arctanh'](a)
     ax[i, 1].set_title('df/dx')
     ax[i, 1].set_xlabel('f(x)->')
     ax[i, 1].plot(fx, ddx_of_fx)
