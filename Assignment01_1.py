@@ -95,7 +95,7 @@ f(x) = thita0*x0 + thita1*x1 + thita2*x2 + .... + thitaN*xN
                                    .
                                    xN]
 '''
-class LinearRegression:    
+class LinearRegression:        
     def __init__(self, alpha = 0.0001, iteration = 10000, verbose = (True, 1000)):
         self.alpha = alpha
         self.iteration = iteration
@@ -103,7 +103,7 @@ class LinearRegression:
         self.theta = np.ndarray
         self.cost = np.ndarray
         #self.cost = np.empty((0, 0), int)
-
+        
     def print_(self, text, skip=True):        
         if(self.verbose[0] and not skip):
             print(text)
@@ -118,7 +118,7 @@ class LinearRegression:
         return fx
     
     def gradient_descent(self, theta, h, X, y, n):
-        w = np.random.randn(2)
+        #w = np.random.randn(2)
         iteration_count = 0
         m = X.shape[0]
         self.cost = np.ones(self.iteration)
@@ -136,9 +136,9 @@ class LinearRegression:
             h = self.hx(theta, X, n)
             self.cost[i] = (1/m) * 0.5 * sum(np.square(h - y))
             self.print_('Cost/Iteration[{}]: {}'.format(i, self.cost[i]), not(iteration_count >= self.verbose[1]))
-            i +=1
+        #i +=1
         self.theta = theta.reshape(1, n+1)
-        
+    
     def fit(self, X, y, algo='gradient_descent'):
         n = X.shape[1]                              #Nos. of Features [x1....xN]
         m = X.shape[0]                              #no. of Rows/Records
@@ -179,8 +179,8 @@ def featureScaling(X_train):
 #%%
 trained_scaled = featureScaling(train[['RM', 'LSTAT']])
 lm = LinearRegression(iteration=10, verbose=(True, 200))
-#lm.fit(train[['RM', 'LSTAT']], train['price'])
-#print('RM: \n{}\LS:\n{}'.format(trained_scaled['RM'], trained_scaled['LSTAT']))
+    #lm.fit(train[['RM', 'LSTAT']], train['price'])
+    #print('RM: \n{}\LS:\n{}'.format(trained_scaled['RM'], trained_scaled['LSTAT']))
 lm.fit(trained_scaled, train['price'])
 print('Thetas: {}'.format(lm.theta))
 #%%
