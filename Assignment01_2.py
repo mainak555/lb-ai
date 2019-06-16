@@ -154,7 +154,7 @@ class LogisticRegression:
         plt.show()
 #%%
 from sklearn.utils.multiclass import unique_labels
-class Matric:
+class Metric:
     def __init__(self, y_hat, y_actual):
         self.y_hat = y_hat
         self.y_actual = y_actual
@@ -313,10 +313,10 @@ lm.cost_minimization_curve()
 print('Thetas[01]: {}'.format(lm.theta))
 #%%
 y_pred_01, y_pred_01_values = lm.predict(test_set_01.iloc[:, 2:4], showlog=True)
-matric_01 = Matric(y_pred_01, test_set_01.iloc[:,-1:].reset_index()['class'])
-pre_re_f1_01 = matric_01.precision_recall_f1() 
-print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_01.accuracy(), pre_re_f1_01))
-matric_01.plot_confusion_matrix(normalized=False, class_names=iris.target_names)
+metric01 = Metric(y_pred_01, test_set_01.iloc[:,-1:].reset_index()['class'])
+pre_re_f1_01 = metric01.precision_recall_f1() 
+print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(metric01.accuracy(), pre_re_f1_01))
+metric01.plot_confusion_matrix(normalized=False, class_names=iris.target_names)
 #%%
 y_pred_01
 y_pred_01_values
@@ -331,10 +331,10 @@ lm.cost_minimization_curve()
 #%%
 train_set_12.loc[train_set_12['class'] == 2] = 0
 y_pred_12, y_pred_12_values = lm.predict(train_set_12.iloc[:,2:4], showlog=True)
-matric_12= Matric(y_pred_12, train_set_12.iloc[:,-1:].reset_index()['class'])
-prf1_12 = matric_12.precision_recall_f1() 
-print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_12.accuracy(), prf1_12))
-matric_12.plot_confusion_matrix(normalized=False, class_names=iris.target_names[1:3])
+metric12= Metric(y_pred_12, train_set_12.iloc[:,-1:].reset_index()['class'])
+prf1_12 = metric12.precision_recall_f1() 
+print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(metric12.accuracy(), prf1_12))
+metric12.plot_confusion_matrix(normalized=False, class_names=iris.target_names[1:3])
 #%%
 '''Replacing '2' with '1' to fit
 '''
@@ -346,8 +346,8 @@ lm.cost_minimization_curve()
 #%%
 test_set_20.loc[test_set_20['class'] == 2] = 1
 y_pred_20, y_pred_20_values = lm.predict(test_set_20.iloc[:,2:4], showlog=True)
-matric_20 = Matric(y_pred_20, test_set_20.iloc[:,-1:].reset_index()['class'])
-prf1_20 = matric_20.precision_recall_f1() 
-print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(matric_20.accuracy(), prf1_20))
-matric_20.plot_confusion_matrix(normalized=False, class_names=[iris.target_names[i] for i in (0, 2)])
+metric20 = Metric(y_pred_20, test_set_20.iloc[:,-1:].reset_index()['class'])
+prf1_20 = metric20.precision_recall_f1() 
+print('Accuracy: {}, \n(Precision, Recall, F1): {}'.format(metric20.accuracy(), prf1_20))
+metric20.plot_confusion_matrix(normalized=False, class_names=[iris.target_names[i] for i in (0, 2)])
 #%%
