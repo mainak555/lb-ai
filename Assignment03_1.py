@@ -18,6 +18,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import time
+import sys
 #from tensorflow.python.framework import ops
 
 # Load the fashion-mnist pre-shuffled train data and test data
@@ -48,16 +49,20 @@ for i in range(12):
     plt.yticks([])
 plt.show()
 #%%
-#Tain Test Set
-
-#%%
+n_input = 784                   #data input (img shape: 28*28)
 IMAGE_SIZE = 28
 NUM_CHANNELS = 1
+PIXCEL_DEPTH = 255
 NUM_LABELS = 10
-
-n_input = 784                   #data input (img shape: 28*28)
-train_size = y_train.shape[0]   #(60000, )
-
+#%%
+#Train Validation Set
+VALIDATION_SIZE = 5000
+validation_data = x_train[:VALIDATION_SIZE, ...]
+validationlabels = y_train[:VALIDATION_SIZE]
+train_data = x_train[VALIDATION_SIZE:]
+train_labels = y_train[VALIDATION_SIZE:]
+#%%
+train_size = train_labels.shape[0]   
 epoc = 10
 batch_size = 64
 eval_frequency = 100
@@ -67,27 +72,27 @@ tf.set_random_seed(42)
 with tf.name_scope('placeholders'):
     x = tf.placeholder(tf.float32, (batch_size, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS), name='x')
     y = tf.placeholder(tf.int64, (batch_size), name='y')
-    mode = tf.placeholder(tf.string, name='mode')
-
+    eval_x = tf.placeholder(tf.float32, shape=(batch_size, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
+    
 with tf.name_scope('weights'):
-    w_conv1 = tf.Variable( tf.truncated_normal([5, 5, NUM_CHANNELS, 32],   #5X5 filter, depth 32
+    w_conv1 = tf.Variable( tf.truncated_normal([5, 5, NUM_CHANNELS, 128],   #5X5 filter, depth 32
         stddev=0.1, dtype=tf.float32), name='w_conv1')
-    b_conv1 = tf.Variable(tf.zeros(32), dtype=tf.float32, name='b_conv1')
+    b_conv1 = tf.Variable(tf.zeros(128), dtype=tf.float32, name='b_conv1')
 
-    w_conv2 = tf.Variable(tf.truncated_normal([5, 5, 32, 64], 
+    w_conv2 = tf.Variable(tf.truncated_normal([5, 5, 128, 64], 
         stddev=0.1, dtype=tf.float32), name='w_conv2')
     b_conv2 = tf.Variable(tf.constant(0.1, shape=[64], dtype=tf.float32), name='b_conv2')
 
-    w_fc1 = tf.Variable(tf.truncated_normal([IMAGE_SIZE//4 * IMAGE_SIZE//4 * 64, 512],
+    w_fc1 = tf.Variable(tf.truncated_normal([IMAGE_SIZE//4 * IMAGE_SIZE//4 * 64, 1024],
         stddev=0.1, dtype=tf.float32), name='w_fc1')
-    b_fc1 = tf.Variable(tf.constant(0.1, shape=[512], dtype=tf.float32))
+    b_fc1 = tf.Variable(tf.constant(0.1, shape=[1024], dtype=tf.float32))
 
-    w_fc2 = tf.Variable(tf.truncated_normal([512, NUM_LABELS],
+    w_fc2 = tf.Variable(tf.truncated_normal([1024, NUM_LABELS],
         stddev=0.1, dtype=tf.float32), name='w_fc2')
     b_fc2 = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS], dtype=tf.float32), name='b_fc2') 
 #%%
 #with tf.name_scope('network'):
-def model_cnn(data, mode='test'):
+def model_cnn(data, mode):
     conv = tf.nn.conv2d(data, w_conv1, strides=[1, 1, 1, 1], padding='SAME')
     relu = tf.nn.relu(tf.nn.bias_add(conv, b_conv1))    #bias & relu added
     pool = tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
@@ -105,12 +110,12 @@ def model_cnn(data, mode='test'):
 
     hidden = tf.nn.relu(tf.matmul(reshape, w_fc1) + b_fc1)
 
-    if mode == 'train':
-        hidden = tf.nn.dropout(hidden, 0.5)
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        hidden = tf.nn.dropout(hidden, 0.4)
     return tf.matmul(hidden, w_fc2) + b_fc2
 
 with tf.name_scope('loss'):  
-    logits = model(x, 'train')  
+    logits = model_cnn(x, tf.estimator.ModeKeys.TRAIN)  
     loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=y))
 
 with tf.name_scope('regularizer'):      #L2 regularization for the fully connected parameters
@@ -132,52 +137,82 @@ with tf.name_scope('optimizer'):
         0.95,                           #Decay rate             
         staircase=True 
     )
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate, 0.9).minimize(loss, global_step=batch)
+    optimizer = tf.train.AdamOptimizer(learning_rate, 0.7).minimize(loss, global_step=batch)
 
 with tf.name_scope("summaries"):
     tf.summary.scalar("loss", loss)
     merged = tf.summary.merge_all()
-train_writer = tf.summary.FileWriter('/tf_logdir/mnist-fassion-train', tf.get_default_graph())
+train_writer = tf.summary.FileWriter('/tmp/tf_logdir/', tf.get_default_graph())
 #%%
-with tf.name_scope('train_prediction'):
+with tf.name_scope('training'):
     train_prediction = tf.nn.softmax(logits)    #Predictions for the current training minibatch
 
-#with tf.name_scope('eval_prediction'):
+with tf.name_scope('validation'):
+    eval_prediction = tf.nn.softmax(model_cnn(eval_x, tf.estimator.ModeKeys.EVAL))
 
 def error_rate(predictions, labels):
   """Return the error rate based on dense predictions and sparse labels."""
   return 100.0 - (
       100.0 * np.sum(np.argmax(predictions, 1) == labels) / predictions.shape[0]
     )
+
+def eval_in_batches(data, sess):
+    size = data.shape[0]
+    if size < batch_size:
+        raise ValueError('Batch Size for validation is larger than validation set')
+    
+    predict = np.ndarray(shape=(size, NUM_LABELS), dtype=np.float32)
+    for begin in range(0, size, batch_size):
+        end = begin + batch_size        
+        if end <= size:
+            eval_data = data[begin:end, ...]
+            predict[begin:end, :] = sess.run(eval_prediction, feed_dict={
+                eval_x: eval_data.reshape(eval_data.shape[0], IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS)
+            })
+        else:
+            eval_data = data[-batch_size:, ...]
+            batch_predict = sess.run(eval_prediction, feed_dict={
+                eval_x: eval_data.reshape(eval_data.shape[0], IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS)
+            })
+            predict[begin:, :] = batch_predict[begin - size:, :]
+    return predict
 #%%
 start_time = time.time()
 with tf.Session() as sess:
     tf.global_variables_initializer().run()
     for step in range(int(epoc * train_size) // batch_size):
         offset = (step * batch_size) % (train_size - batch_size)
-        batch_data = x_train[offset: (offset + batch_size), ...]
-        batch_labels = y_train[offset: (offset + batch_size)]
+        batch_data = train_data[offset: (offset + batch_size), ...]
+        batch_labels = train_labels[offset: (offset + batch_size)]
         feed_dict={
             x: batch_data.reshape(batch_data.shape[0], IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS),
-            y: batch_labels,
-            mode: 'train'
+            y: batch_labels
         }
-        sess.run(optimizer, feed_dict=feed_dict)
+        _, summary, l = sess.run([optimizer, merged, loss], feed_dict=feed_dict)
 
-        # print("Step: %d, Loss: %f" %(i, loss))
-        # train_writer.add_summary(summary, loss)
+        #print("Step: %d, Loss: %f" %(step, l))
+        train_writer.add_summary(summary, l)
 
         if step % eval_frequency == 0:
-            ll, lr, prediction = sess.run([loss, learning_rate, train_prediction], feed_dict=feed_dict)
+            l, lr, prediction = sess.run([loss, learning_rate, train_prediction], feed_dict=feed_dict)
+            #l, lr, prediction, summary = sess.run([loss, learning_rate, train_prediction, merged], feed_dict=feed_dict)
             
             elapsed_time = time.time() - start_time
             start_time = time.time()
             print('Step: %d (epoc: %.2f), %1f ms' %
                 (step, float(step) * batch_size / train_size,
                 1000 * elapsed_time / eval_frequency))
-            print('Minibatch Loss: %4f, Learning Rate: %6f, Error: %.1f%%' %(ll, lr, error_rate(prediction, batch_labels)))
-
-    sess.close()
+            print('Minibatch Loss: %4f, Learning Rate: %6f, Error: %.1f%%' %
+                (l, lr, error_rate(prediction, batch_labels)))
             
+            validation = eval_in_batches(validation_data, sess)
+            print('Validation Error: %.1f%%' %error_rate(validation, validationlabels)) 
+            sys.stdout.flush()         
+            #train_writer.add_summary(summary, l)
 
+    #Testing
+    test = eval_in_batches(x_test, sess)
+    print('Test Error: %.1f%%' %error_rate(test, y_test))
+    sess.close()
+           
 #%%
