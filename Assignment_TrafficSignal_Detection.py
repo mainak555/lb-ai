@@ -33,16 +33,16 @@ if not os.path.isdir(dataPath):
 #os.rename('BelgiumTSC_Training.zip', data_dir + '/BelgiumTSC_Training.zip')
 
 #%%
-# import zipfile
-# with zipfile.ZipFile(dataPath + '/BelgiumTSC_Testing.zip', 'r') as zip_ref:
-#     zip_ref.extractall(dataPath)
-# with zipfile.ZipFile(dataPath + '/BelgiumTSC_Training.zip', 'r') as zip_ref:
-#     zip_ref.extractall(dataPath)
+import zipfile
+with zipfile.ZipFile(dataPath + '/BelgiumTSC_Testing.zip', 'r') as zip_ref:
+    zip_ref.extractall(dataPath)
+with zipfile.ZipFile(dataPath + '/BelgiumTSC_Training.zip', 'r') as zip_ref:
+    zip_ref.extractall(dataPath)
 #%%
-# if os.path.exists(dataPath + '/BelgiumTSC_Testing.zip'):
-#     os.remove(dataPath + '/BelgiumTSC_Testing.zip')
-# if os.path.exists(dataPath + '/BelgiumTSC_Training.zip'):
-#     os.remove(dataPath + '/BelgiumTSC_Training.zip')
+if os.path.exists(dataPath + '/BelgiumTSC_Testing.zip'):
+    os.remove(dataPath + '/BelgiumTSC_Testing.zip')
+if os.path.exists(dataPath + '/BelgiumTSC_Training.zip'):
+    os.remove(dataPath + '/BelgiumTSC_Training.zip')
 #%%
 def load_data(data_dir):
     # Get all subdirectories of data_dir. Each represents a label.
