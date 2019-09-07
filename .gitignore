@@ -1,2 +1,5 @@
 .vscode
 .csv
+projects/*/*.zip
+projects/**/dataset/
+**/amritansh/

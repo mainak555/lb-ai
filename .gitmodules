@@ -1,0 +1,3 @@
+[submodule "projects/lisa-traffic-sign-detection/ssd_tensorflow_traffic_sign_detection"]
+	path = projects/lisa-traffic-sign-detection/ssd_tensorflow_traffic_sign_detection
+	url = https://github.com/georgesung/ssd_tensorflow_traffic_sign_detection.git
